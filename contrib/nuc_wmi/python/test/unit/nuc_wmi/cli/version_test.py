@@ -35,10 +35,10 @@ class TestCliVersion(unittest.TestCase):
         Initializes the unit tests.
         """
 
-        self.maxDiff = None
+        self.maxDiff = None # pylint: disable=invalid-name
 
     @patch('nuc_wmi.cli.version.print')
-    @patch('nuc_wmi.cli.version.exit')
+    @patch('nuc_wmi.cli.version.sys.exit')
     @patch('nuc_wmi.cli.version.wmi_interface_spec_compliance_version')
     def test_wmi_interface_spec_compliance_version_cli(
             self,
@@ -53,8 +53,8 @@ class TestCliVersion(unittest.TestCase):
 
         self.assertTrue(nuc_wmi.cli.version.wmi_interface_spec_compliance_version is \
                         nuc_wmi_cli_wmi_interface_spec_compliance_version)
-        self.assertTrue(nuc_wmi.cli.version.exit is nuc_wmi_sys_exit)
-        self.assertTrue(nuc_wmi.cli.version.print is nuc_wmi_print)
+        self.assertTrue(nuc_wmi.cli.version.sys.exit is nuc_wmi_sys_exit)
+        self.assertTrue(nuc_wmi.cli.version.print is nuc_wmi_print) # pylint: disable=no-member
 
         # Branch 1: Test that wmi_interface_spec_compliance_version_cli returns the proper JSON response and exit
         #           code for valid cli args
@@ -64,7 +64,9 @@ class TestCliVersion(unittest.TestCase):
         returned_wmi_interface_spec_compliance_version_cli = wmi_interface_spec_compliance_version_cli([])
 
         nuc_wmi_cli_wmi_interface_spec_compliance_version.assert_called_with(
-            control_file=None
+            control_file=None,
+            debug=False,
+            quirks=None
         )
         nuc_wmi_print.assert_called()
         self.assertEqual(
@@ -74,10 +76,25 @@ class TestCliVersion(unittest.TestCase):
 
         self.assertEqual(returned_wmi_interface_spec_compliance_version_cli, None)
 
-        # Reset
-        nuc_wmi_cli_wmi_interface_spec_compliance_version.reset_mock()
-        nuc_wmi_sys_exit.reset_mock()
-        nuc_wmi_print.reset_mock()
+
+    @patch('nuc_wmi.cli.version.print')
+    @patch('nuc_wmi.cli.version.sys.exit')
+    @patch('nuc_wmi.cli.version.wmi_interface_spec_compliance_version')
+    def test_wmi_interface_spec_compliance_version_cli2(
+            self,
+            nuc_wmi_cli_wmi_interface_spec_compliance_version,
+            nuc_wmi_sys_exit,
+            nuc_wmi_print
+    ):
+        """
+        Tests that `wmi_interface_spec_compliance_version_cli` returns the expected exceptions, return values, or
+        outputs.
+        """
+
+        self.assertTrue(nuc_wmi.cli.version.wmi_interface_spec_compliance_version is \
+                        nuc_wmi_cli_wmi_interface_spec_compliance_version)
+        self.assertTrue(nuc_wmi.cli.version.sys.exit is nuc_wmi_sys_exit)
+        self.assertTrue(nuc_wmi.cli.version.print is nuc_wmi_print) # pylint: disable=no-member
 
         # Branch 2: Test that wmi_interface_spec_compliance_version_cli captures raised errors and returns
         #           the proper JSON error response and exit code.
@@ -86,7 +103,9 @@ class TestCliVersion(unittest.TestCase):
         returned_wmi_interface_spec_compliance_version_cli = wmi_interface_spec_compliance_version_cli([])
 
         nuc_wmi_cli_wmi_interface_spec_compliance_version.assert_called_with(
-            control_file=None
+            control_file=None,
+            debug=False,
+            quirks=None
         )
         nuc_wmi_print.assert_called_with('{"error": "Error (Function not supported)"}')
         nuc_wmi_sys_exit.assert_called_with(1)

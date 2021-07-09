@@ -4,12 +4,15 @@
 
 from __future__ import print_function
 
+import sys
+
 from argparse import ArgumentParser
 from json import dumps
-from sys import exit
 
 from nuc_wmi import CONTROL_FILE, LED_COLOR, LED_COLOR_TYPE, LED_BLINK_FREQUENCY, LED_TYPE
 from nuc_wmi.get_led import get_led
+
+import nuc_wmi
 
 def get_led_cli(cli_args=None):
     """
@@ -40,6 +43,20 @@ def get_led_cli(cli_args=None):
         help='The path to the NUC WMI control file. Defaults to ' + CONTROL_FILE + ' if not specified.'
     )
     parser.add_argument(
+        '-d',
+        '--debug',
+        action='store_true',
+        help='Enable debug logging of read and write to the NUC LED control file to stderr.'
+    )
+    parser.add_argument(
+        '-q',
+        '--quirks',
+        action='append',
+        choices=nuc_wmi.QUIRKS_AVAILABLE,
+        default=None,
+        help='Enable NUC WMI quirks to work around various implementation issues or bugs.'
+    )
+    parser.add_argument(
         'led',
         choices=[led for led in LED_TYPE['legacy'] if led],
         help='The legacy LED for which to get the state.'
@@ -48,7 +65,18 @@ def get_led_cli(cli_args=None):
     try:
         args = parser.parse_args(args=cli_args)
 
-        (brightness, frequency, color) = get_led(LED_TYPE['legacy'].index(args.led), control_file=args.control_file)
+        led_color_type = LED_COLOR_TYPE['legacy'][args.led]
+        led_type_index = LED_TYPE['legacy'].index(args.led)
+
+        (brightness, frequency_index, color_index) = get_led( # pylint: disable=unbalanced-tuple-unpacking
+            led_type_index,
+            control_file=args.control_file,
+            debug=args.debug,
+            quirks=args.quirks
+        )
+
+        led_color = LED_COLOR['legacy'][led_color_type][color_index]
+        led_frequency = LED_BLINK_FREQUENCY['legacy'][frequency_index]
 
         print(
             dumps(
@@ -56,13 +84,13 @@ def get_led_cli(cli_args=None):
                     'led': {
                         'type': args.led,
                         'brightness': str(brightness),
-                        'frequency': LED_BLINK_FREQUENCY['legacy'][frequency],
-                        'color': LED_COLOR['legacy'][LED_COLOR_TYPE['legacy'][args.led]][color]
+                        'frequency': led_frequency,
+                        'color': led_color
                     }
                 }
             )
         )
-    except Exception as err:
+    except Exception as err: # pylint: disable=broad-except
         print(dumps({'error': str(err)}))
 
-        exit(1)
+        sys.exit(1)

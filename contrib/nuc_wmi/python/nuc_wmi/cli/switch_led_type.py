@@ -4,12 +4,15 @@
 
 from __future__ import print_function
 
+import sys
+
 from argparse import ArgumentParser
 from json import dumps
-from sys import exit
 
-from nuc_wmi import CONTROL_FILE, LED_COLOR, LED_COLOR_TYPE, LED_BLINK_FREQUENCY, LED_TYPE
+from nuc_wmi import CONTROL_FILE
 from nuc_wmi.switch_led_type import LED_COLOR_GROUP, switch_led_type
+
+import nuc_wmi
 
 def switch_led_type_cli(cli_args=None):
     """
@@ -40,6 +43,20 @@ def switch_led_type_cli(cli_args=None):
         help='The path to the NUC WMI control file. Defaults to ' + CONTROL_FILE + ' if not specified.'
     )
     parser.add_argument(
+        '-d',
+        '--debug',
+        action='store_true',
+        help='Enable debug logging of read and write to the NUC LED control file to stderr.'
+    )
+    parser.add_argument(
+        '-q',
+        '--quirks',
+        action='append',
+        choices=nuc_wmi.QUIRKS_AVAILABLE,
+        default=None,
+        help='Enable NUC WMI quirks to work around various implementation issues or bugs.'
+    )
+    parser.add_argument(
         'led_color_group',
         choices=LED_COLOR_GROUP,
         help='The LED color group type to set the LEDs to.'
@@ -48,7 +65,14 @@ def switch_led_type_cli(cli_args=None):
     try:
         args = parser.parse_args(args=cli_args)
 
-        switch_led_type(LED_COLOR_GROUP.index(args.led_color_group), control_file=args.control_file)
+        led_color_group_index = LED_COLOR_GROUP.index(args.led_color_group)
+
+        switch_led_type(
+            led_color_group_index,
+            control_file=args.control_file,
+            debug=args.debug,
+            quirks=args.quirks
+        )
 
         print(
             dumps(
@@ -59,7 +83,7 @@ def switch_led_type_cli(cli_args=None):
                 }
             )
         )
-    except Exception as err:
+    except Exception as err: # pylint: disable=broad-except
         print(dumps({'error': str(err)}))
 
-        exit(1)
+        sys.exit(1)

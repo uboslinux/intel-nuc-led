@@ -35,11 +35,11 @@ class TestCliSetLedIndicatorOption(unittest.TestCase):
         Initializes the unit tests.
         """
 
-        self.maxDiff = None
+        self.maxDiff = None # pylint: disable=invalid-name
 
 
     @patch('nuc_wmi.cli.set_led_indicator_option.print')
-    @patch('nuc_wmi.cli.set_led_indicator_option.exit')
+    @patch('nuc_wmi.cli.set_led_indicator_option.sys.exit')
     @patch('nuc_wmi.cli.set_led_indicator_option.set_led_indicator_option')
     def test_set_led_indicator_option_cli(
             self,
@@ -53,8 +53,8 @@ class TestCliSetLedIndicatorOption(unittest.TestCase):
 
         self.assertTrue(nuc_wmi.cli.set_led_indicator_option.set_led_indicator_option is \
                         nuc_wmi_set_led_indicator_option)
-        self.assertTrue(nuc_wmi.cli.set_led_indicator_option.exit is nuc_wmi_sys_exit)
-        self.assertTrue(nuc_wmi.cli.set_led_indicator_option.print is nuc_wmi_print)
+        self.assertTrue(nuc_wmi.cli.set_led_indicator_option.sys.exit is nuc_wmi_sys_exit)
+        self.assertTrue(nuc_wmi.cli.set_led_indicator_option.print is nuc_wmi_print) # pylint: disable=no-member
 
         # Branch 1: Test that set_led_indicator_option_cli returns the proper JSON response and exit
         #           code for valid cli args
@@ -70,7 +70,9 @@ class TestCliSetLedIndicatorOption(unittest.TestCase):
         nuc_wmi_set_led_indicator_option.assert_called_with(
             LED_TYPE['new'].index('HDD LED'),
             LED_INDICATOR_OPTION.index('HDD Activity Indicator'),
-            control_file=None
+            control_file=None,
+            debug=False,
+            quirks=None
         )
         nuc_wmi_print.assert_called()
         self.assertEqual(
@@ -85,10 +87,24 @@ class TestCliSetLedIndicatorOption(unittest.TestCase):
 
         self.assertEqual(returned_set_led_indicator_option_cli, None)
 
-        # Reset
-        nuc_wmi_set_led_indicator_option.reset_mock()
-        nuc_wmi_sys_exit.reset_mock()
-        nuc_wmi_print.reset_mock()
+
+    @patch('nuc_wmi.cli.set_led_indicator_option.print')
+    @patch('nuc_wmi.cli.set_led_indicator_option.sys.exit')
+    @patch('nuc_wmi.cli.set_led_indicator_option.set_led_indicator_option')
+    def test_set_led_indicator_option_cli2(
+            self,
+            nuc_wmi_set_led_indicator_option,
+            nuc_wmi_sys_exit,
+            nuc_wmi_print
+    ):
+        """
+        Tests that `set_led_indicator_option_cli` returns the expected exceptions, return values, or outputs.
+        """
+
+        self.assertTrue(nuc_wmi.cli.set_led_indicator_option.set_led_indicator_option is \
+                        nuc_wmi_set_led_indicator_option)
+        self.assertTrue(nuc_wmi.cli.set_led_indicator_option.sys.exit is nuc_wmi_sys_exit)
+        self.assertTrue(nuc_wmi.cli.set_led_indicator_option.print is nuc_wmi_print) # pylint: disable=no-member
 
         # Branch 2: Test that set_led_indicator_option_cli captures raised errors and returns
         #           the proper JSON error response and exit code.
@@ -104,9 +120,61 @@ class TestCliSetLedIndicatorOption(unittest.TestCase):
         nuc_wmi_set_led_indicator_option.assert_called_with(
             LED_TYPE['new'].index('HDD LED'),
             LED_INDICATOR_OPTION.index('HDD Activity Indicator'),
-            control_file=None
+            control_file=None,
+            debug=False,
+            quirks=None
         )
         nuc_wmi_print.assert_called_with('{"error": "Error (Function not supported)"}')
         nuc_wmi_sys_exit.assert_called_with(1)
+
+        self.assertEqual(returned_set_led_indicator_option_cli, None)
+
+
+    @patch('nuc_wmi.cli.set_led_indicator_option.print')
+    @patch('nuc_wmi.cli.set_led_indicator_option.sys.exit')
+    @patch('nuc_wmi.cli.set_led_indicator_option.set_led_indicator_option')
+    def test_set_led_indicator_option_cli3(
+            self,
+            nuc_wmi_set_led_indicator_option,
+            nuc_wmi_sys_exit,
+            nuc_wmi_print
+    ):
+        """
+        Tests that `set_led_indicator_option_cli` returns the expected exceptions, return values, or outputs.
+        """
+
+        self.assertTrue(nuc_wmi.cli.set_led_indicator_option.set_led_indicator_option is \
+                        nuc_wmi_set_led_indicator_option)
+        self.assertTrue(nuc_wmi.cli.set_led_indicator_option.sys.exit is nuc_wmi_sys_exit)
+        self.assertTrue(nuc_wmi.cli.set_led_indicator_option.print is nuc_wmi_print) # pylint: disable=no-member
+
+        # Branch 3: Test that set_led_indicator_option_cli returns the proper JSON response and exit
+        #           code for valid cli args
+
+        # Set HDD LED indicator option to Software Indicator
+        returned_set_led_indicator_option_cli = set_led_indicator_option_cli(
+            [
+                LED_TYPE['new'][1],
+                LED_INDICATOR_OPTION[4]
+            ]
+        )
+
+        nuc_wmi_set_led_indicator_option.assert_called_with(
+            LED_TYPE['new'].index('HDD LED'),
+            LED_INDICATOR_OPTION.index('Software Indicator'),
+            control_file=None,
+            debug=False,
+            quirks=None
+        )
+        nuc_wmi_print.assert_called()
+        self.assertEqual(
+            json.loads(nuc_wmi_print.call_args.args[0]),
+            {
+                'led': {
+                    'type': LED_TYPE['new'][1],
+                    'indicator_option': LED_INDICATOR_OPTION[4]
+                }
+            }
+        )
 
         self.assertEqual(returned_set_led_indicator_option_cli, None)

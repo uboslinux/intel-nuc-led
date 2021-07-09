@@ -121,7 +121,7 @@ package in the form of a `wheel`, `egg`, or distro specific package using `setup
 ## Testing
 
 Use your system's package manager to install your choice of `python` version and `coverage`, `mock`, `nose`, `nose-cov`,
-and `setuptools` Python packages.
+`pylint`, and `setuptools` Python packages.
 
 Clean directory:
 
@@ -135,6 +135,7 @@ find . -type d -name "__pycache__" -exec rmdir {} +
 Run tests:
 
 ```
+pylint python/nuc_wmi python/test/
 python setup.py test
 ```
 
@@ -162,6 +163,7 @@ $ nuc_wmi-get_led 'S0 Power LED'
 $ nuc_wmi-get_led 'S0 Ring LED'
 {"led": {"color": "White", "frequency": "Always on", "type": "S0 Ring LED", "brightness": "100"}}
 
+# Brightness is an integer percentage 0-100 and not the internal WMI hex value.
 $ nuc_wmi-set_led 'S0 Ring LED' 100 'Always on' 'White'
 {"led": {"color": "White", "frequency": "Always on", "type": "S0 Ring LED", "brightness": "100"}}
 ```
@@ -171,12 +173,15 @@ $ nuc_wmi-set_led 'S0 Ring LED' 100 'Always on' 'White'
 ```
 $ nuc_wmi-get_led_control_item 'HDD LED' 'Software Indicator' 'Brightness'
 {"led": {"control_item": "Brightness", "type": "HDD LED", "indicator_option": "Software Indicator", "control_item_value": "100"}}
+# For BIOS where the HDD LED LED color type is "Dual-color Blue / White"
 $ nuc_wmi-get_led_control_item 'HDD LED' 'Software Indicator' 'Color'
 {"led": {"control_item": "Color", "type": "HDD LED", "indicator_option": "Software Indicator", "control_item_value": "White"}}
 $ nuc_wmi-get_led_control_item 'Power Button LED' 'Power State Indicator' 'S0 Indicator Color'
 {"led": {"control_item": "S0 Indicator Color", "type": "Power Button LED", "indicator_option": "Power State Indicator", "control_item_value": "Blue"}}
 $ nuc_wmi-get_led_control_item 'Power Button LED' 'Power State Indicator' 'S0 Indicator Brightness'
 {"led": {"control_item": "S0 Indicator Brightness", "type": "Power Button LED", "indicator_option": "Power State Indicator", "control_item_value": "50"}}
+$ nuc_wmi-get_led_control_item 'HDD LED' 'Software Indicator' 'Blinking Frequency'
+{"led": {"control_item": "Blinking Frequency", "type": "HDD LED", "indicator_option": "Software Indicator", "control_item_value": "1.0Hz"}}
 
 $ nuc_wmi-get_led_indicator_option 'HDD LED'
 {"led": {"type": "HDD LED", "indicator_option": "Software Indicator"}}
@@ -187,6 +192,8 @@ $ nuc_wmi-query_led_color_type 'HDD LED'
 {"led": {"color_type": "Dual-color Blue / White", "type": "HDD LED"}}
 $ nuc_wmi-query_led_color_type 'Power Button LED'
 {"led": {"color_type": "Dual-color Blue / Amber", "type": "Power Button LED"}}
+$ nuc_wmi-query_led_color_type 'HDD LED'
+{"led": {"color_type": "RGB-color", "type": "HDD LED"}}
 
 $ nuc_wmi-query_led_control_items 'Power Button LED' 'Power State Indicator'
 {"led": {"control_items": ["S0 Indicator Brightness", "S0 Indicator Blinking Behavior", "S0 Indicator Blinking Frequency", "S0 Indicator Color"], "type": "Power Button LED", "indicator_option": "Power State Indicator"}}
@@ -202,16 +209,35 @@ $ nuc_wmi-query_led_indicator_options 'HDD LED'
 $ nuc_wmi-query_led_indicator_options 'Power Button LED'
 {"led": {"type": "Power Button LED", "indicator_options": ["Power State Indicator", "HDD Activity Indicator", "Software Indicator"]}}
 
+# RGB Header is only available if on the latest BIOS
 $ nuc_wmi-query_leds
-{"leds": ["Power Button LED", "HDD LED"]}
+{"leds": ["Power Button LED", "HDD LED", "RGB Header"]}
 
 $ nuc_wmi-save_led_config
 {"led_app_notification": {"type": "save_led_config"}}
 
+# Brightness is an integer percentage 0-100 and not the internal WMI hex value.
 $ nuc_wmi-set_led_control_item 'HDD LED' 'Software Indicator' 'Brightness' 100
 {"led": {"control_item": "Brightness", "type": "HDD LED", "indicator_option": "Software Indicator", "control_item_value": "100"}}
+# Blinking Frequency is 0.1Hz-1.0Hz
+$ nuc_wmi-set_led_control_item 'HDD LED' 'Software Indicator' 'Blinking Frequency' '1.0Hz'
+{"led": {"control_item": "Blinking Frequency", "type": "HDD LED", "indicator_option": "Software Indicator", "control_item_value": "1.0Hz"}}
 $ nuc_wmi-set_led_control_item 'Power Button LED' 'Power State Indicator' 'S0 Indicator Color' Blue
 {"led": {"control_item": "S0 Indicator Color", "type": "Power Button LED", "indicator_option": "Power State Indicator", "control_item_value": "Blue"}}
+# For BIOS where the HDD LED LED color type is "RGB-color" but 1D (where only 'Color' is a supported control item)
+$ nuc_wmi-set_led_control_item 'HDD LED' 'Software Indicator' 'Color' 'Indigo'
+{"led": {"control_item": "Color", "type": "HDD LED", "indicator_option": "Software Indicator", "control_item_value": "Indigo"}}
+# For LEDs where the color type is RGB-color but 3D, the color is controlled by 3 dimension settings (one for Red, Green, and Blue respectively) that accept
+# an integer value from 0-255 for each color dimension. There may be multiple control item triplets for RGB colors per indicator option. For
+# this example we pretend the HDD LED reports its color type as RGB-color and we set the LED to Red (you must set all 3 dimensions to ensure you end up with the correct color).
+# If you want to avoid having the color change as you set the dimensions, your only option is to drop the brightness down to 0 before settng the color and back to a
+# non zero brightness once its set.
+$ nuc_wmi-set_led_control_item 'HDD LED' 'Software Indicator' 'Color' '255' # Red dimension
+{"led": {"control_item": "Color", "type": "HDD LED", "indicator_option": "Software Indicator", "control_item_value": "255"}}
+$ nuc_wmi-set_led_control_item 'HDD LED' 'Software Indicator' 'Color 2' '0' # Green dimension
+{"led": {"control_item": "Color 2", "type": "HDD LED", "indicator_option": "Software Indicator", "control_item_value": "0"}}
+$ nuc_wmi-set_led_control_item 'HDD LED' 'Software Indicator' 'Color 3' '0' # Blue dimension
+{"led": {"control_item": "Color 3", "type": "HDD LED", "indicator_option": "Software Indicator", "control_item_value": "0"}}
 
 $ nuc_wmi-set_led_indicator_option 'HDD LED' 'Software Indicator'
 {"led": {"type": "HDD LED", "indicator_option": "Software Indicator"}}
@@ -225,3 +251,32 @@ $ nuc_wmi-switch_led_type 'Multi color LED'
 $ nuc_wmi-wmi_interface_spec_compliance_version
 {"version": {"semver": "1.32", "type": "wmi_interface_spec_compliance"}}
 ```
+## Quirks Mode
+
+Unfortunately there can be a large set of differences across the devices and sometimes bugs in the BIOS
+implementation make it out into the wild. All CLI commands support `quirks mode` via the `-q` and `--quirks`
+CLI options.
+
+### NUC 7 Quirks
+
+* `NUC7_FREQUENCY_DEFAULT`: This `quirks mode` changes the processing of the return value for the `get_led`
+    WMI method for NUC 7 BIOS. This affects NUC 7 in a factory default state where the NUC LEDs state hasnt been changed.
+    In a factory default state, the NUC 7 can properly return `0` for `brightness` and `0` for `color` (aka `Disabled`),
+    however it also returns `0` for `frequency` which is an invalid enum value according to the documentation. Enabling
+    this quirks mode overrides any `0` value returned for `frequency` and converts it to `1` for `1Hz`. Enabling this
+    quirks mode on a BIOS not affected by this issue will not cause a change in the return value for `frequency`.
+
+### NUC 10 Quirks
+
+* `NUC10_RETURN_VALUE`: This `quirks mode` changes the processing of the return value for the `query_led_color_type`
+    and `get_led_indicator_option` WMI methods for NUC 10 BIOS released before December 2020 that also did not support
+    the NUC 10 RGB header. In NUC 10 BIOS released before December 2020, the implementation for these two WMI methods do
+    not follow the spec, therefore they are only compatible `nuc_wmi` `1.0`. If you have the December 2020 or later BIOS,
+    then `nuc_wmi` `1.1` or later is required. `nuc_wmi` `2.1` was the first version to support this `quirks mode` so
+    any version `2.1` or greater supports all these BIOS.
+
+    In order to determine whether or not you need to enable this `quirks mode`, you can run `nuc_wmi-query_leds` and
+    if `RGB Header` is not an option then you will likely have to enable this `quirk`. Note that although only
+    `query_led_color_type` and `get_led_indicator_option` WMI method's return value processing is affected, some of the
+    other `nuc_wmi` CLI functions may call these two functions when processing CLI arguments, therefore you should always
+    enable this `quirks mode` if your BIOS version is old enough to be affected by it.
